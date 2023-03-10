@@ -10,8 +10,7 @@ bft_interp = { path = "./bft_interp" }
 bft_types = { path = "./bft_types" }
 
 [workspace]
-
-member = [
+members = [
     "bft_interp",
     "bft_types",
 ]
