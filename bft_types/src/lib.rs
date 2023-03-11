@@ -75,6 +75,22 @@ impl Display for InputInstruction {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_display() {
+        let inst = InputInstruction {
+            inst: Instruction::Increment,
+            line_number: 100,
+            char_number: 42,
+            source_name: PathBuf::from("module.test")
+        };
+        assert_eq!(format!("{}", inst), "[module.test:100:42] Increment current location");
+    }
+}
+
 /// A container to hold an entire Brainf*ck program.
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -97,6 +113,18 @@ impl BFprogram {
 
     /// Parse Extended ASCII text into Brainf*ck bytecode. The Path `source_name` is used to store
     /// the name of the source of the text.
+    /// ```
+    /// use bft_types::BFprogram;
+    /// let code = Vec::<u8>::from(" <  > [\n]");
+    /// let program = BFprogram::new("doc.test", &code);
+    ///
+    /// let mut iter = program.as_ref().into_iter();
+    /// assert_eq!(format!("{}", iter.next().unwrap()), "[doc.test:1:2] Move left one location");
+    /// assert_eq!(format!("{}", iter.next().unwrap()), "[doc.test:1:5] Move right one location");
+    /// assert_eq!(format!("{}", iter.next().unwrap()), "[doc.test:1:7] Start looping");
+    /// assert_eq!(format!("{}", iter.next().unwrap()), "[doc.test:2:1] Finish looping");
+    /// assert!(iter.next().is_none());
+    /// ```
     pub fn new<P: AsRef<Path>, V: AsRef<Vec<u8>>>(source_name: P, data: V) -> BFprogram {
         let mut ret = BFprogram {
             source_name: PathBuf::from(source_name.as_ref()),
