@@ -32,7 +32,7 @@ impl<C: Default> BFVM<C> {
     /// The main interpreter that takes a program and (eventually) interprets it.
     pub fn interpret(&self, code: &BFprogram) {
         for inst in code.as_ref() {
-            println!("{}", inst);
+            println!("{inst}");
         }
     }
 }
