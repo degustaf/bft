@@ -85,9 +85,12 @@ mod tests {
             inst: Instruction::Increment,
             line_number: 100,
             char_number: 42,
-            source_name: PathBuf::from("module.test")
+            source_name: PathBuf::from("module.test"),
         };
-        assert_eq!(format!("{}", inst), "[module.test:100:42] Increment current location");
+        assert_eq!(
+            format!("{}", inst),
+            "[module.test:100:42] Increment current location"
+        );
     }
 }
 

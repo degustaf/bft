@@ -16,7 +16,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let src = BFprogram::from_file(fname)?;
     let vm = BFVM::<u8>::new(0, false);
-
     vm.interpret(&src);
 
     Ok(())
