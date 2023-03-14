@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .ok_or("A file name to process is required.")?,
     );
     let src = BFprogram::from_file(fname)?;
-    let vm = BFVM::<u8>::new(0, false);
+    let vm: BFVM<u8> = BFVM::new(None, false);
     vm.interpret(&src);
 
     Ok(())
