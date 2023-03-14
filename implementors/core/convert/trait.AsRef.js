@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"bft_types":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.68.0/core/convert/trait.AsRef.html\" title=\"trait core::convert::AsRef\">AsRef</a>&lt;[<a class=\"struct\" href=\"bft_types/struct.InputInstruction.html\" title=\"struct bft_types::InputInstruction\">InputInstruction</a>]&gt; for <a class=\"struct\" href=\"bft_types/struct.BFprogram.html\" title=\"struct bft_types::BFprogram\">BFprogram</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

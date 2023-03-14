@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["BFVM","Object that contains the internal workings of our Brainf*ck interpreter."]]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":[["BFprogram","A container to hold an entire Brainf*ck program."],["InputInstruction","Annotated bytecode instructions for brainf*ck."]]};
