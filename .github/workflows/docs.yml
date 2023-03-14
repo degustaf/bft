@@ -13,6 +13,7 @@ jobs:
           toolchain: stable
       - run: cargo doc --all
 
+  deploy:
     name: Deploy
     runs-on: ubuntu-latest
     steps:
