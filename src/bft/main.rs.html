@@ -20,27 +20,43 @@
 <a href="#20" id="20">20</a>
 <a href="#21" id="21">21</a>
 <a href="#22" id="22">22</a>
+<a href="#23" id="23">23</a>
+<a href="#24" id="24">24</a>
+<a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Main entry point to our Brainf*ck interpreter.
-
 </span><span class="attr">#![warn(missing_docs)]
 
-</span><span class="kw">use </span>std::env::args_os;
-<span class="kw">use </span>std::path::PathBuf;
+</span><span class="kw">use </span>clap::Parser;
+<span class="kw">use </span>std::process::ExitCode;
 
 <span class="kw">use </span>bft_interp::BFVM;
 <span class="kw">use </span>bft_types::BFprogram;
 
-<span class="kw">fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
-    <span class="kw">let </span>fname = PathBuf::from(
-        args_os()
-            .nth(<span class="number">1</span>)
-            .ok_or(<span class="string">&quot;A file name to process is required.&quot;</span>)<span class="question-mark">?</span>,
-    );
-    <span class="kw">let </span>src = BFprogram::from_file(fname)<span class="question-mark">?</span>;
-    <span class="kw">let </span>vm = BFVM::&lt;u8&gt;::new(<span class="number">0</span>, <span class="bool-val">false</span>);
+<span class="kw">mod </span>cli;
+
+<span class="kw">fn </span>run_bft(options: <span class="kw-2">&amp;</span>cli::Opt) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>src = BFprogram::from_file(options.program.clone())<span class="question-mark">?</span>;
+    src.validate_brackets()<span class="question-mark">?</span>;
+    <span class="kw">let </span>vm: BFVM&lt;u8&gt; = BFVM::new(<span class="prelude-val">None</span>, <span class="bool-val">false</span>);
     vm.interpret(<span class="kw-2">&amp;</span>src);
 
     <span class="prelude-val">Ok</span>(())
+}
+
+<span class="kw">fn </span>main() -&gt; ExitCode {
+    <span class="kw">let </span>opt = cli::Opt::parse();
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = run_bft(<span class="kw-2">&amp;</span>opt) {
+        <span class="kw">const </span>BIN_NAME: <span class="kw-2">&amp;</span>str = <span class="macro">env!</span>(<span class="string">&quot;CARGO_PKG_NAME&quot;</span>);
+        <span class="macro">eprintln!</span>(<span class="string">&quot;{BIN_NAME}: {error}&quot;</span>);
+        ExitCode::from(<span class="number">1</span>)
+    } <span class="kw">else </span>{
+        ExitCode::from(<span class="number">0</span>)
+    }
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="bft" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0 (2c8cc3432 2023-03-06)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["BFVM","Object that contains the internal workings of our Brainf*ck interpreter."]]};
+window.SIDEBAR_ITEMS = {"struct":[["BFVM","Brainf*ck interpreter internal state."]]};

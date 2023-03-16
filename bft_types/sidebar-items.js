@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["BFprogram","A container to hold an entire Brainf*ck program."],["InputInstruction","Annotated bytecode instructions for brainf*ck."]]};
+window.SIDEBAR_ITEMS = {"enum":[["Instruction","Raw bytecodes for the brainf*ck VM."]],"struct":[["BFprogram","A container to hold an entire Brainf*ck program."],["InputInstruction","Annotated bytecode instructions for brainf*ck."]]};
