@@ -13,7 +13,7 @@ pub struct Opt {
 
     /// Number of cells for the programs tape.
     #[arg(short, long, default_value_t = 30000, value_parser = clap::value_parser!(u64).range(1..))]
-    pub cells: usize,
+    pub cells: u64,
 
     /// Allow the program tape to be automatically extended.
     #[arg(short, long, default_value_t = false)]
