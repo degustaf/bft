@@ -400,6 +400,20 @@
 <a href="#400" id="400">400</a>
 <a href="#401" id="401">401</a>
 <a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Types for a Brainf*ck interpreter.
 
 </span><span class="attr">#![warn(missing_docs)]
@@ -500,29 +514,31 @@
 #[derive(Debug, PartialEq)]
 </span><span class="kw">pub enum </span>BracketMatchError {
     <span class="doccomment">/// An opening bracket never found a matching closing bracket.
-    </span>ExtraOpeningBracket(PathBuf, InputInstruction),
+    </span>ExtraOpeningBracket(PathBuf, usize, usize),
 
     <span class="doccomment">/// A closing bracket was found when all opening brackets were matched.
-    </span>ExtraClosingBracket(PathBuf, InputInstruction),
+    </span>ExtraClosingBracket(PathBuf, usize, usize),
 }
 
 <span class="kw">impl </span>Display <span class="kw">for </span>BracketMatchError {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
         <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self </span>{
-            <span class="self">Self</span>::ExtraClosingBracket(source_name, inst) =&gt; {
+            <span class="self">Self</span>::ExtraClosingBracket(source_name, line_number, char_number) =&gt; {
                 <span class="macro">write!</span>(
                     f,
-                    <span class="string">&quot;Unexpected closing bracket &#39;]&#39; at [{}:{}]&quot;</span>,
+                    <span class="string">&quot;Unexpected closing bracket &#39;]&#39; at [{}:{}:{}]&quot;</span>,
                     source_name.display(),
-                    inst.location()
+                    line_number,
+                    char_number
                 )
             }
-            <span class="self">Self</span>::ExtraOpeningBracket(source_name, inst) =&gt; {
+            <span class="self">Self</span>::ExtraOpeningBracket(source_name, line_number, char_number) =&gt; {
                 <span class="macro">write!</span>(
                     f,
-                    <span class="string">&quot;Unmatched bracket &#39;[&#39; at [{}:{}]&quot;</span>,
+                    <span class="string">&quot;Unmatched bracket &#39;[&#39; at [{}:{}:{}]&quot;</span>,
                     source_name.display(),
-                    inst.location()
+                    line_number,
+                    char_number
                 )
             }
         }
@@ -644,7 +660,8 @@
                     <span class="kw">_ </span>=&gt; {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(BracketMatchError::ExtraClosingBracket(
                             <span class="self">self</span>.source_name.clone(),
-                            <span class="kw-2">*</span>inst,
+                            inst.line_number,
+                            inst.char_number,
                         ));
                     }
                 },
@@ -653,9 +670,11 @@
         }
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(idx) = stack.pop() {
+            <span class="kw">let </span>inst = <span class="self">self</span>.src[idx];
             <span class="prelude-val">Err</span>(BracketMatchError::ExtraOpeningBracket(
                 <span class="self">self</span>.source_name.clone(),
-                <span class="self">self</span>.src[idx],
+                inst.line_number,
+                inst.char_number,
             ))
         } <span class="kw">else </span>{
             <span class="self">self</span>.brackets = brackets;
@@ -728,6 +747,24 @@
     }
 
     <span class="attr">#[test]
+    </span><span class="kw">fn </span>bracket_match_error_display() {
+        <span class="macro">assert_eq!</span>(
+            <span class="macro">format!</span>(
+                <span class="string">&quot;{}&quot;</span>,
+                BracketMatchError::ExtraOpeningBracket(<span class="string">&quot;mod.test&quot;</span>.into(), <span class="number">12</span>, <span class="number">45</span>)
+            ),
+            <span class="string">&quot;Unmatched bracket &#39;[&#39; at [mod.test:12:45]&quot;
+        </span>);
+        <span class="macro">assert_eq!</span>(
+            <span class="macro">format!</span>(
+                <span class="string">&quot;{}&quot;</span>,
+                BracketMatchError::ExtraClosingBracket(<span class="string">&quot;mod.test&quot;</span>.into(), <span class="number">42</span>, <span class="number">78</span>)
+            ),
+            <span class="string">&quot;Unexpected closing bracket &#39;]&#39; at [mod.test:42:78]&quot;
+        </span>);
+    }
+
+    <span class="attr">#[test]
     </span><span class="kw">fn </span>proper_brackets() {
         <span class="kw">let </span>code = Vec::from(<span class="string">&quot;[[[]][][[[]]]]&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>program = BFprogram::new(<span class="string">&quot;mod.test&quot;</span>, <span class="kw-2">&amp;</span>code);
@@ -742,12 +779,9 @@
             program.validate_brackets(),
             <span class="prelude-val">Err</span>(BracketMatchError::ExtraClosingBracket(
                 <span class="string">&quot;mod.test&quot;</span>.into(),
-                InputInstruction {
-                    inst: Instruction::EndLoop,
-                    line_number: <span class="number">1</span>,
-                    char_number: <span class="number">9
-                </span>}
-            ))
+                <span class="number">1</span>,
+                <span class="number">9
+            </span>))
         );
     }
 
@@ -759,12 +793,9 @@
             program.validate_brackets(),
             <span class="prelude-val">Err</span>(BracketMatchError::ExtraOpeningBracket(
                 <span class="string">&quot;mod.test&quot;</span>.into(),
-                InputInstruction {
-                    inst: Instruction::BeginLoop,
-                    line_number: <span class="number">1</span>,
-                    char_number: <span class="number">1
-                </span>}
-            ))
+                <span class="number">1</span>,
+                <span class="number">1
+            </span>))
         );
     }
 
@@ -776,12 +807,9 @@
             program.validate_brackets(),
             <span class="prelude-val">Err</span>(BracketMatchError::ExtraClosingBracket(
                 <span class="string">&quot;mod.test&quot;</span>.into(),
-                InputInstruction {
-                    inst: Instruction::EndLoop,
-                    line_number: <span class="number">1</span>,
-                    char_number: <span class="number">5
-                </span>}
-            ))
+                <span class="number">1</span>,
+                <span class="number">5
+            </span>))
         );
     }
 
