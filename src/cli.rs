@@ -1,8 +1,8 @@
 #![warn(missing_docs)]
 
 use clap::Parser;
-use std::path::PathBuf;
 use std::num::NonZeroUsize;
+use std::path::PathBuf;
 
 /// A Brainf*ck interpreter.
 #[derive(Debug, Parser)]

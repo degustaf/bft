@@ -1,6 +1,6 @@
 on: [push, workflow_dispatch]
 
-name: CI
+name: Documentation
 
 jobs:
   docs:
