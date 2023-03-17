@@ -50,3 +50,17 @@ impl<C> BFVM<C> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_vm() {
+        let mut vm: BFVM<u8> = BFVM::new(NonZeroUsize::new(200), false);
+        assert_eq!(vm.tape.len(), 200);
+
+        vm = BFVM::new(NonZeroUsize::new(0), false);
+        assert_eq!(vm.tape.len(), 30000);
+    }
+}

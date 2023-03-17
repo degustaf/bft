@@ -11,5 +11,5 @@ jobs:
         with:
           toolchain: stable
       - run: cargo install cargo-tarpaulin
-      - run: cargo tarpaulin --all --line --out Stdout
+      - run: cargo tarpaulin --all --line --out Stdout --fail-under 75
 

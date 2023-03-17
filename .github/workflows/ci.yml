@@ -33,7 +33,7 @@ jobs:
         with:
           toolchain: stable
       - run: cargo clippy --version
-      - run: cargo clippy --all --all-tests -- -D clippy::pedantic -D warnings
+      - run: cargo clippy --all --all-targets -- -D clippy::pedantic -D warnings
 
   compile:
     name: Compile

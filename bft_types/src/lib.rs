@@ -98,29 +98,31 @@ impl InputInstruction {
 #[derive(Debug, PartialEq)]
 pub enum BracketMatchError {
     /// An opening bracket never found a matching closing bracket.
-    ExtraOpeningBracket(PathBuf, InputInstruction),
+    ExtraOpeningBracket(PathBuf, usize, usize),
 
     /// A closing bracket was found when all opening brackets were matched.
-    ExtraClosingBracket(PathBuf, InputInstruction),
+    ExtraClosingBracket(PathBuf, usize, usize),
 }
 
 impl Display for BracketMatchError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match &self {
-            Self::ExtraClosingBracket(source_name, inst) => {
+            Self::ExtraClosingBracket(source_name, line_number, char_number) => {
                 write!(
                     f,
-                    "Unexpected closing bracket ']' at [{}:{}]",
+                    "Unexpected closing bracket ']' at [{}:{}:{}]",
                     source_name.display(),
-                    inst.location()
+                    line_number,
+                    char_number
                 )
             }
-            Self::ExtraOpeningBracket(source_name, inst) => {
+            Self::ExtraOpeningBracket(source_name, line_number, char_number) => {
                 write!(
                     f,
-                    "Unmatched bracket '[' at [{}:{}]",
+                    "Unmatched bracket '[' at [{}:{}:{}]",
                     source_name.display(),
-                    inst.location()
+                    line_number,
+                    char_number
                 )
             }
         }
@@ -242,7 +244,8 @@ impl BFprogram {
                     _ => {
                         return Err(BracketMatchError::ExtraClosingBracket(
                             self.source_name.clone(),
-                            *inst,
+                            inst.line_number,
+                            inst.char_number,
                         ));
                     }
                 },
@@ -251,9 +254,11 @@ impl BFprogram {
         }
 
         if let Some(idx) = stack.pop() {
+            let inst = self.src[idx];
             Err(BracketMatchError::ExtraOpeningBracket(
                 self.source_name.clone(),
-                self.src[idx],
+                inst.line_number,
+                inst.char_number,
             ))
         } else {
             self.brackets = brackets;
@@ -326,6 +331,24 @@ mod tests {
     }
 
     #[test]
+    fn bracket_match_error_display() {
+        assert_eq!(
+            format!(
+                "{}",
+                BracketMatchError::ExtraOpeningBracket("mod.test".into(), 12, 45)
+            ),
+            "Unmatched bracket '[' at [mod.test:12:45]"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                BracketMatchError::ExtraClosingBracket("mod.test".into(), 42, 78)
+            ),
+            "Unexpected closing bracket ']' at [mod.test:42:78]"
+        );
+    }
+
+    #[test]
     fn proper_brackets() {
         let code = Vec::from("[[[]][][[[]]]]");
         let mut program = BFprogram::new("mod.test", &code);
@@ -340,11 +363,8 @@ mod tests {
             program.validate_brackets(),
             Err(BracketMatchError::ExtraClosingBracket(
                 "mod.test".into(),
-                InputInstruction {
-                    inst: Instruction::EndLoop,
-                    line_number: 1,
-                    char_number: 9
-                }
+                1,
+                9
             ))
         );
     }
@@ -357,11 +377,8 @@ mod tests {
             program.validate_brackets(),
             Err(BracketMatchError::ExtraOpeningBracket(
                 "mod.test".into(),
-                InputInstruction {
-                    inst: Instruction::BeginLoop,
-                    line_number: 1,
-                    char_number: 1
-                }
+                1,
+                1
             ))
         );
     }
@@ -374,11 +391,8 @@ mod tests {
             program.validate_brackets(),
             Err(BracketMatchError::ExtraClosingBracket(
                 "mod.test".into(),
-                InputInstruction {
-                    inst: Instruction::EndLoop,
-                    line_number: 1,
-                    char_number: 5
-                }
+                1,
+                5
             ))
         );
     }
