@@ -3,6 +3,7 @@
 #![warn(missing_docs)]
 use std::cmp::Eq;
 use std::convert::AsRef;
+use std::error::Error;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::fs::read;
@@ -91,6 +92,42 @@ impl InputInstruction {
         &self.inst
     }
 }
+
+/// Possibile errors during the bracket matching algorithm.
+#[allow(dead_code)]
+#[derive(Debug, PartialEq)]
+pub enum BracketMatchError {
+    /// An opening bracket never found a matching closing bracket.
+    ExtraOpeningBracket(PathBuf, InputInstruction),
+
+    /// A closing bracket was found when all opening brackets were matched.
+    ExtraClosingBracket(PathBuf, InputInstruction),
+}
+
+impl Display for BracketMatchError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match &self {
+            Self::ExtraClosingBracket(source_name, inst) => {
+                write!(
+                    f,
+                    "Unexpected closing bracket ']' at [{}:{}]",
+                    source_name.display(),
+                    inst.location()
+                )
+            }
+            Self::ExtraOpeningBracket(source_name, inst) => {
+                write!(
+                    f,
+                    "Unmatched bracket '[' at [{}:{}]",
+                    source_name.display(),
+                    inst.location()
+                )
+            }
+        }
+    }
+}
+
+impl Error for BracketMatchError {}
 
 /// A container to hold an entire Brainf*ck program.
 #[derive(Debug)]
@@ -189,31 +226,34 @@ impl BFprogram {
     ///
     /// assert!(program.validate_brackets().is_ok());
     /// ```
-    pub fn validate_brackets(&mut self) -> Result<(), String> {
+    pub fn validate_brackets(&mut self) -> Result<(), BracketMatchError> {
         let mut stack: Vec<usize> = Vec::new();
         let mut brackets: Vec<(usize, usize)> = Vec::new();
 
         for (idx, inst) in self.src.iter().enumerate() {
-            if Instruction::BeginLoop == *inst.instruction() {
-                stack.push(idx);
-            } else if Instruction::EndLoop == *inst.instruction() {
-                if let Some(matched_bracket) = stack.pop() {
-                    brackets.push((matched_bracket, idx));
-                } else {
-                    return Err(format!(
-                        "Unexpected closing bracket ']' at [{}:{}]",
-                        self.source_name.display(),
-                        inst.location()
-                    ));
+            match *inst.instruction() {
+                Instruction::BeginLoop => {
+                    stack.push(idx);
                 }
+                Instruction::EndLoop => match stack.pop() {
+                    Some(matched_bracket) => {
+                        brackets.push((matched_bracket, idx));
+                    }
+                    _ => {
+                        return Err(BracketMatchError::ExtraClosingBracket(
+                            self.source_name.clone(),
+                            *inst,
+                        ));
+                    }
+                },
+                _ => {}
             }
         }
 
         if let Some(idx) = stack.pop() {
-            Err(format!(
-                "Unmatched bracket '[' at [{}:{}]",
-                self.source_name.display(),
-                self.src[idx].location()
+            Err(BracketMatchError::ExtraOpeningBracket(
+                self.source_name.clone(),
+                self.src[idx],
             ))
         } else {
             self.brackets = brackets;
@@ -257,7 +297,7 @@ mod tests {
     }
 
     #[test]
-    fn test_byte_parsing() {
+    fn byte_parsing() {
         assert_eq!(Instruction::from_byte(b'<'), Some(Instruction::MoveLeft));
         assert_eq!(Instruction::from_byte(b'>'), Some(Instruction::MoveRight));
         assert_eq!(Instruction::from_byte(b'+'), Some(Instruction::Increment));
@@ -269,33 +309,14 @@ mod tests {
     }
 
     #[test]
-    fn test_bytes_that_dont_parse() {
-        for i in 0..=42 {
-            assert!(Instruction::from_byte(i).is_none());
-        }
-        // b'+' == 43
-        // b',' == 44
-        // b'-' == 45
-        // b'.' == 46
-        for i in 47..=59 {
-            assert!(Instruction::from_byte(i).is_none());
-        }
-        // b'<' == 60
-        assert!(Instruction::from_byte(61).is_none());
-        // b'>' == 62
-        for i in 63..=90 {
-            assert!(Instruction::from_byte(i).is_none());
-        }
-        // b'[' == 91
-        assert!(Instruction::from_byte(92).is_none());
-        // b']' == 93
-        for i in 94..=255 {
+    fn bytes_that_dont_parse() {
+        for i in (0..=255u8).filter(|n| !b"+,-.<>[]".contains(n)) {
             assert!(Instruction::from_byte(i).is_none());
         }
     }
 
     #[test]
-    fn test_location() {
+    fn location() {
         let inst = InputInstruction {
             inst: Instruction::Increment,
             line_number: 100,
@@ -305,63 +326,77 @@ mod tests {
     }
 
     #[test]
-    fn test_proper_brackets() {
+    fn proper_brackets() {
         let code = Vec::from("[[[]][][[[]]]]");
         let mut program = BFprogram::new("mod.test", &code);
         assert!(program.validate_brackets().is_ok());
     }
 
     #[test]
-    fn test_missing_left_bracket() {
+    fn missing_left_bracket() {
         let code = Vec::from("[[][][]]]");
         let mut program = BFprogram::new("mod.test", &code);
         assert_eq!(
             program.validate_brackets(),
-            Err(String::from(
-                "Unexpected closing bracket ']' at [mod.test:1:9]"
+            Err(BracketMatchError::ExtraClosingBracket(
+                "mod.test".into(),
+                InputInstruction {
+                    inst: Instruction::EndLoop,
+                    line_number: 1,
+                    char_number: 9
+                }
             ))
         );
     }
 
     #[test]
-    fn test_missing_right_bracket() {
+    fn missing_right_bracket() {
         let code = Vec::from("[[][][]");
         let mut program = BFprogram::new("mod.test", &code);
         assert_eq!(
             program.validate_brackets(),
-            Err(String::from("Unmatched bracket '[' at [mod.test:1:1]"))
-        );
-    }
-
-    #[test]
-    fn test_out_of_order_pairs() {
-        let code = Vec::from("[[]]][");
-        let mut program = BFprogram::new("mod.test", &code);
-        assert_eq!(
-            program.validate_brackets(),
-            Err(String::from(
-                "Unexpected closing bracket ']' at [mod.test:1:5]"
+            Err(BracketMatchError::ExtraOpeningBracket(
+                "mod.test".into(),
+                InputInstruction {
+                    inst: Instruction::BeginLoop,
+                    line_number: 1,
+                    char_number: 1
+                }
             ))
         );
     }
 
     #[test]
-    fn test_loading_from_file() {
+    fn out_of_order_pairs() {
+        let code = Vec::from("[[]]][");
+        let mut program = BFprogram::new("mod.test", &code);
+        assert_eq!(
+            program.validate_brackets(),
+            Err(BracketMatchError::ExtraClosingBracket(
+                "mod.test".into(),
+                InputInstruction {
+                    inst: Instruction::EndLoop,
+                    line_number: 1,
+                    char_number: 5
+                }
+            ))
+        );
+    }
+
+    #[test]
+    fn loading_from_file() {
         let file_name: PathBuf = PathBuf::from("../data/session1.txt");
         let program = BFprogram::from_file(file_name).expect("Program should load.");
         assert_eq!(*program.source(), PathBuf::from("../data/session1.txt"));
-        let mut iter = program.instructions().into_iter();
+        let mut iter = program.instructions().iter();
         let inst = iter.next();
         assert_eq!(
-            inst.map_or(String::from("No Instruction"), |i| format!(
-                "{}",
-                i.instruction()
-            )),
-            "Increment current location"
-        );
-        assert_eq!(
-            inst.map_or(String::from("No Instruction"), |i| i.location()),
-            "8:4"
+            inst,
+            Some(&InputInstruction {
+                inst: Instruction::Increment,
+                line_number: 8,
+                char_number: 4
+            })
         );
     }
 }
