@@ -19,10 +19,12 @@
 <a href="#19" id="19">19</a>
 <a href="#20" id="20">20</a>
 <a href="#21" id="21">21</a>
+<a href="#22" id="22">22</a>
 </pre><pre class="rust"><code><span class="attr">#![warn(missing_docs)]
 
 </span><span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>std::path::PathBuf;
+<span class="kw">use </span>std::num::NonZeroUsize;
 
 <span class="doccomment">/// A Brainf*ck interpreter.
 </span><span class="attr">#[derive(Debug, Parser)]
@@ -33,8 +35,8 @@
     </span><span class="kw">pub </span>program: PathBuf,
 
     <span class="doccomment">/// Number of cells for the programs tape.
-    </span><span class="attr">#[arg(short, long, default_value_t = <span class="number">30000</span>, value_parser = <span class="macro">clap::value_parser!</span>(u64).range(<span class="number">1</span>..))]
-    </span><span class="kw">pub </span>cells: u64,
+    </span><span class="attr">#[arg(short, long)]
+    </span><span class="kw">pub </span>cells: <span class="prelude-ty">Option</span>&lt;NonZeroUsize&gt;,
 
     <span class="doccomment">/// Allow the program tape to be automatically extended.
     </span><span class="attr">#[arg(short, long, default_value_t = <span class="bool-val">false</span>)]

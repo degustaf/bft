@@ -365,11 +365,47 @@
 <a href="#365" id="365">365</a>
 <a href="#366" id="366">366</a>
 <a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Types for a Brainf*ck interpreter.
 
 </span><span class="attr">#![warn(missing_docs)]
 </span><span class="kw">use </span>std::cmp::Eq;
 <span class="kw">use </span>std::convert::AsRef;
+<span class="kw">use </span>std::error::Error;
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::fmt::{Display, Formatter};
 <span class="kw">use </span>std::fs::read;
@@ -458,6 +494,42 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.inst
     }
 }
+
+<span class="doccomment">/// Possibile errors during the bracket matching algorithm.
+</span><span class="attr">#[allow(dead_code)]
+#[derive(Debug, PartialEq)]
+</span><span class="kw">pub enum </span>BracketMatchError {
+    <span class="doccomment">/// An opening bracket never found a matching closing bracket.
+    </span>ExtraOpeningBracket(PathBuf, InputInstruction),
+
+    <span class="doccomment">/// A closing bracket was found when all opening brackets were matched.
+    </span>ExtraClosingBracket(PathBuf, InputInstruction),
+}
+
+<span class="kw">impl </span>Display <span class="kw">for </span>BracketMatchError {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self </span>{
+            <span class="self">Self</span>::ExtraClosingBracket(source_name, inst) =&gt; {
+                <span class="macro">write!</span>(
+                    f,
+                    <span class="string">&quot;Unexpected closing bracket &#39;]&#39; at [{}:{}]&quot;</span>,
+                    source_name.display(),
+                    inst.location()
+                )
+            }
+            <span class="self">Self</span>::ExtraOpeningBracket(source_name, inst) =&gt; {
+                <span class="macro">write!</span>(
+                    f,
+                    <span class="string">&quot;Unmatched bracket &#39;[&#39; at [{}:{}]&quot;</span>,
+                    source_name.display(),
+                    inst.location()
+                )
+            }
+        }
+    }
+}
+
+<span class="kw">impl </span>Error <span class="kw">for </span>BracketMatchError {}
 
 <span class="doccomment">/// A container to hold an entire Brainf*ck program.
 </span><span class="attr">#[derive(Debug)]
@@ -556,31 +628,34 @@
     ///
     /// assert!(program.validate_brackets().is_ok());
     /// ```
-    </span><span class="kw">pub fn </span>validate_brackets(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+    </span><span class="kw">pub fn </span>validate_brackets(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), BracketMatchError&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>stack: Vec&lt;usize&gt; = Vec::new();
         <span class="kw">let </span><span class="kw-2">mut </span>brackets: Vec&lt;(usize, usize)&gt; = Vec::new();
 
         <span class="kw">for </span>(idx, inst) <span class="kw">in </span><span class="self">self</span>.src.iter().enumerate() {
-            <span class="kw">if </span>Instruction::BeginLoop == <span class="kw-2">*</span>inst.instruction() {
-                stack.push(idx);
-            } <span class="kw">else if </span>Instruction::EndLoop == <span class="kw-2">*</span>inst.instruction() {
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(matched_bracket) = stack.pop() {
-                    brackets.push((matched_bracket, idx));
-                } <span class="kw">else </span>{
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                        <span class="string">&quot;Unexpected closing bracket &#39;]&#39; at [{}:{}]&quot;</span>,
-                        <span class="self">self</span>.source_name.display(),
-                        inst.location()
-                    ));
+            <span class="kw">match </span><span class="kw-2">*</span>inst.instruction() {
+                Instruction::BeginLoop =&gt; {
+                    stack.push(idx);
                 }
+                Instruction::EndLoop =&gt; <span class="kw">match </span>stack.pop() {
+                    <span class="prelude-val">Some</span>(matched_bracket) =&gt; {
+                        brackets.push((matched_bracket, idx));
+                    }
+                    <span class="kw">_ </span>=&gt; {
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(BracketMatchError::ExtraClosingBracket(
+                            <span class="self">self</span>.source_name.clone(),
+                            <span class="kw-2">*</span>inst,
+                        ));
+                    }
+                },
+                <span class="kw">_ </span>=&gt; {}
             }
         }
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(idx) = stack.pop() {
-            <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;Unmatched bracket &#39;[&#39; at [{}:{}]&quot;</span>,
-                <span class="self">self</span>.source_name.display(),
-                <span class="self">self</span>.src[idx].location()
+            <span class="prelude-val">Err</span>(BracketMatchError::ExtraOpeningBracket(
+                <span class="self">self</span>.source_name.clone(),
+                <span class="self">self</span>.src[idx],
             ))
         } <span class="kw">else </span>{
             <span class="self">self</span>.brackets = brackets;
@@ -624,7 +699,7 @@
     }
 
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_byte_parsing() {
+    </span><span class="kw">fn </span>byte_parsing() {
         <span class="macro">assert_eq!</span>(Instruction::from_byte(<span class="string">b&#39;&lt;&#39;</span>), <span class="prelude-val">Some</span>(Instruction::MoveLeft));
         <span class="macro">assert_eq!</span>(Instruction::from_byte(<span class="string">b&#39;&gt;&#39;</span>), <span class="prelude-val">Some</span>(Instruction::MoveRight));
         <span class="macro">assert_eq!</span>(Instruction::from_byte(<span class="string">b&#39;+&#39;</span>), <span class="prelude-val">Some</span>(Instruction::Increment));
@@ -636,33 +711,14 @@
     }
 
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_bytes_that_dont_parse() {
-        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..=<span class="number">42 </span>{
-            <span class="macro">assert!</span>(Instruction::from_byte(i).is_none());
-        }
-        <span class="comment">// b&#39;+&#39; == 43
-        // b&#39;,&#39; == 44
-        // b&#39;-&#39; == 45
-        // b&#39;.&#39; == 46
-        </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">47</span>..=<span class="number">59 </span>{
-            <span class="macro">assert!</span>(Instruction::from_byte(i).is_none());
-        }
-        <span class="comment">// b&#39;&lt;&#39; == 60
-        </span><span class="macro">assert!</span>(Instruction::from_byte(<span class="number">61</span>).is_none());
-        <span class="comment">// b&#39;&gt;&#39; == 62
-        </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">63</span>..=<span class="number">90 </span>{
-            <span class="macro">assert!</span>(Instruction::from_byte(i).is_none());
-        }
-        <span class="comment">// b&#39;[&#39; == 91
-        </span><span class="macro">assert!</span>(Instruction::from_byte(<span class="number">92</span>).is_none());
-        <span class="comment">// b&#39;]&#39; == 93
-        </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">94</span>..=<span class="number">255 </span>{
+    </span><span class="kw">fn </span>bytes_that_dont_parse() {
+        <span class="kw">for </span>i <span class="kw">in </span>(<span class="number">0</span>..=<span class="number">255u8</span>).filter(|n| !<span class="string">b&quot;+,-.&lt;&gt;[]&quot;</span>.contains(n)) {
             <span class="macro">assert!</span>(Instruction::from_byte(i).is_none());
         }
     }
 
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_location() {
+    </span><span class="kw">fn </span>location() {
         <span class="kw">let </span>inst = InputInstruction {
             inst: Instruction::Increment,
             line_number: <span class="number">100</span>,
@@ -672,64 +728,78 @@
     }
 
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_proper_brackets() {
+    </span><span class="kw">fn </span>proper_brackets() {
         <span class="kw">let </span>code = Vec::from(<span class="string">&quot;[[[]][][[[]]]]&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>program = BFprogram::new(<span class="string">&quot;mod.test&quot;</span>, <span class="kw-2">&amp;</span>code);
         <span class="macro">assert!</span>(program.validate_brackets().is_ok());
     }
 
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_missing_left_bracket() {
+    </span><span class="kw">fn </span>missing_left_bracket() {
         <span class="kw">let </span>code = Vec::from(<span class="string">&quot;[[][][]]]&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>program = BFprogram::new(<span class="string">&quot;mod.test&quot;</span>, <span class="kw-2">&amp;</span>code);
         <span class="macro">assert_eq!</span>(
             program.validate_brackets(),
-            <span class="prelude-val">Err</span>(String::from(
-                <span class="string">&quot;Unexpected closing bracket &#39;]&#39; at [mod.test:1:9]&quot;
-            </span>))
+            <span class="prelude-val">Err</span>(BracketMatchError::ExtraClosingBracket(
+                <span class="string">&quot;mod.test&quot;</span>.into(),
+                InputInstruction {
+                    inst: Instruction::EndLoop,
+                    line_number: <span class="number">1</span>,
+                    char_number: <span class="number">9
+                </span>}
+            ))
         );
     }
 
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_missing_right_bracket() {
+    </span><span class="kw">fn </span>missing_right_bracket() {
         <span class="kw">let </span>code = Vec::from(<span class="string">&quot;[[][][]&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>program = BFprogram::new(<span class="string">&quot;mod.test&quot;</span>, <span class="kw-2">&amp;</span>code);
         <span class="macro">assert_eq!</span>(
             program.validate_brackets(),
-            <span class="prelude-val">Err</span>(String::from(<span class="string">&quot;Unmatched bracket &#39;[&#39; at [mod.test:1:1]&quot;</span>))
+            <span class="prelude-val">Err</span>(BracketMatchError::ExtraOpeningBracket(
+                <span class="string">&quot;mod.test&quot;</span>.into(),
+                InputInstruction {
+                    inst: Instruction::BeginLoop,
+                    line_number: <span class="number">1</span>,
+                    char_number: <span class="number">1
+                </span>}
+            ))
         );
     }
 
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_out_of_order_pairs() {
+    </span><span class="kw">fn </span>out_of_order_pairs() {
         <span class="kw">let </span>code = Vec::from(<span class="string">&quot;[[]]][&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>program = BFprogram::new(<span class="string">&quot;mod.test&quot;</span>, <span class="kw-2">&amp;</span>code);
         <span class="macro">assert_eq!</span>(
             program.validate_brackets(),
-            <span class="prelude-val">Err</span>(String::from(
-                <span class="string">&quot;Unexpected closing bracket &#39;]&#39; at [mod.test:1:5]&quot;
-            </span>))
+            <span class="prelude-val">Err</span>(BracketMatchError::ExtraClosingBracket(
+                <span class="string">&quot;mod.test&quot;</span>.into(),
+                InputInstruction {
+                    inst: Instruction::EndLoop,
+                    line_number: <span class="number">1</span>,
+                    char_number: <span class="number">5
+                </span>}
+            ))
         );
     }
 
     <span class="attr">#[test]
-    </span><span class="kw">fn </span>test_loading_from_file() {
+    </span><span class="kw">fn </span>loading_from_file() {
         <span class="kw">let </span>file_name: PathBuf = PathBuf::from(<span class="string">&quot;../data/session1.txt&quot;</span>);
         <span class="kw">let </span>program = BFprogram::from_file(file_name).expect(<span class="string">&quot;Program should load.&quot;</span>);
         <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>program.source(), PathBuf::from(<span class="string">&quot;../data/session1.txt&quot;</span>));
-        <span class="kw">let </span><span class="kw-2">mut </span>iter = program.instructions().into_iter();
+        <span class="kw">let </span><span class="kw-2">mut </span>iter = program.instructions().iter();
         <span class="kw">let </span>inst = iter.next();
         <span class="macro">assert_eq!</span>(
-            inst.map_or(String::from(<span class="string">&quot;No Instruction&quot;</span>), |i| <span class="macro">format!</span>(
-                <span class="string">&quot;{}&quot;</span>,
-                i.instruction()
-            )),
-            <span class="string">&quot;Increment current location&quot;
-        </span>);
-        <span class="macro">assert_eq!</span>(
-            inst.map_or(String::from(<span class="string">&quot;No Instruction&quot;</span>), |i| i.location()),
-            <span class="string">&quot;8:4&quot;
-        </span>);
+            inst,
+            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>InputInstruction {
+                inst: Instruction::Increment,
+                line_number: <span class="number">8</span>,
+                char_number: <span class="number">4
+            </span>})
+        );
     }
 }
 </code></pre></div>
